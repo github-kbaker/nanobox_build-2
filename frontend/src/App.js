@@ -247,7 +247,7 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Mobile Header */}
+      {/* Enhanced Mobile Header with Stats */}
       <div className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-sm border-b border-slate-700">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center space-x-3">
@@ -256,86 +256,164 @@ const App = () => {
             </div>
             <div>
               <h1 className="text-lg font-bold text-white">DevStack Manager</h1>
-              <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
-                <span className="text-xs text-slate-400">
-                  {isConnected ? 'Connected' : 'Disconnected'}
-                </span>
+              <div className="flex items-center space-x-4 text-xs text-slate-400">
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
+                  <span>{isConnected ? 'Connected' : 'Disconnected'}</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <BarChart3 className="h-3 w-3" />
+                  <span>{stats.total} envs</span>
+                </div>
               </div>
             </div>
           </div>
           
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white px-6">
-                <Plus className="h-4 w-4 mr-2" />
-                New
+          <div className="flex space-x-2">
+            <Button
+              onClick={fetchEnvironments}
+              className="bg-slate-700 hover:bg-slate-600 text-white p-2"
+              disabled={refreshing}
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            </Button>
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white px-6">
+                  <Plus className="h-4 w-4 mr-2" />
+                  New
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-slate-800 text-white border-slate-700">
+                <DialogHeader>
+                  <DialogTitle>Create New Environment</DialogTitle>
+                  <DialogDescription className="text-slate-400">
+                    Set up a new development stack environment
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={createEnvironment} className="space-y-4">
+                  <div>
+                    <Label htmlFor="name" className="text-sm font-medium text-slate-200">Name</Label>
+                    <Input
+                      id="name"
+                      placeholder="My Dev Environment"
+                      value={newEnv.name}
+                      onChange={(e) => setNewEnv({ ...newEnv, name: e.target.value })}
+                      className="bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="stack" className="text-sm font-medium text-slate-200">Stack Type</Label>
+                    <Select 
+                      value={newEnv.stack_type} 
+                      onValueChange={(value) => setNewEnv({ ...newEnv, stack_type: value })}
+                      required
+                    >
+                      <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                        <SelectValue placeholder="Choose a stack" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-700 border-slate-600">
+                        {stackTypes.map(stack => (
+                          <SelectItem key={stack} value={stack} className="text-white hover:bg-slate-600">
+                            {stack}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="description" className="text-sm font-medium text-slate-200">Description</Label>
+                    <Textarea
+                      id="description"
+                      placeholder="Brief description of this environment..."
+                      value={newEnv.description}
+                      onChange={(e) => setNewEnv({ ...newEnv, description: e.target.value })}
+                      className="bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+                    />
+                  </div>
+                  <div className="flex space-x-3 pt-4">
+                    <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700">
+                      Create Environment
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setIsCreateDialogOpen(false)}
+                      className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-700"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+
+        {/* Statistics Dashboard */}
+        <div className="px-4 pb-4">
+          <div className="grid grid-cols-4 gap-3 mb-4">
+            <div className="bg-slate-800/50 rounded-lg p-3 text-center">
+              <div className="text-blue-400 text-lg font-bold">{stats.total}</div>
+              <div className="text-xs text-slate-400">Total</div>
+            </div>
+            <div className="bg-slate-800/50 rounded-lg p-3 text-center">
+              <div className="text-green-400 text-lg font-bold">{stats.running}</div>
+              <div className="text-xs text-slate-400">Running</div>
+            </div>
+            <div className="bg-slate-800/50 rounded-lg p-3 text-center">
+              <div className="text-gray-400 text-lg font-bold">{stats.stopped}</div>
+              <div className="text-xs text-slate-400">Stopped</div>
+            </div>
+            <div className="bg-slate-800/50 rounded-lg p-3 text-center">
+              <div className="text-yellow-400 text-lg font-bold">{stats.services}</div>
+              <div className="text-xs text-slate-400">Services</div>
+            </div>
+          </div>
+
+          {/* Search and Filter Controls */}
+          <div className="flex space-x-3 mb-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search environments..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-slate-700 border-slate-600 text-white placeholder-slate-400 pl-10"
+              />
+            </div>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-24 bg-slate-700 border-slate-600 text-white">
+                <Filter className="h-4 w-4" />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-700 border-slate-600">
+                <SelectItem value="all" className="text-white">All</SelectItem>
+                <SelectItem value="running" className="text-white">Running</SelectItem>
+                <SelectItem value="stopped" className="text-white">Stopped</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Quick Actions */}
+          {environments.length > 0 && (
+            <div className="flex space-x-2">
+              <Button 
+                onClick={startAllEnvironments}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm py-2"
+              >
+                <Play className="h-3 w-3 mr-2" />
+                Start All
               </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-slate-800 text-white border-slate-700">
-              <DialogHeader>
-                <DialogTitle>Create New Environment</DialogTitle>
-                <DialogDescription className="text-slate-400">
-                  Set up a new development stack environment
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={createEnvironment} className="space-y-4">
-                <div>
-                  <Label htmlFor="name" className="text-sm font-medium text-slate-200">Name</Label>
-                  <Input
-                    id="name"
-                    placeholder="My Dev Environment"
-                    value={newEnv.name}
-                    onChange={(e) => setNewEnv({ ...newEnv, name: e.target.value })}
-                    className="bg-slate-700 border-slate-600 text-white placeholder-slate-400"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="stack" className="text-sm font-medium text-slate-200">Stack Type</Label>
-                  <Select 
-                    value={newEnv.stack_type} 
-                    onValueChange={(value) => setNewEnv({ ...newEnv, stack_type: value })}
-                    required
-                  >
-                    <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
-                      <SelectValue placeholder="Choose a stack" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-700 border-slate-600">
-                      {stackTypes.map(stack => (
-                        <SelectItem key={stack} value={stack} className="text-white hover:bg-slate-600">
-                          {stack}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="description" className="text-sm font-medium text-slate-200">Description</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Brief description of this environment..."
-                    value={newEnv.description}
-                    onChange={(e) => setNewEnv({ ...newEnv, description: e.target.value })}
-                    className="bg-slate-700 border-slate-600 text-white placeholder-slate-400"
-                  />
-                </div>
-                <div className="flex space-x-3 pt-4">
-                  <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700">
-                    Create Environment
-                  </Button>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setIsCreateDialogOpen(false)}
-                    className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-700"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+              <Button 
+                onClick={stopAllEnvironments}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm py-2"
+              >
+                <Square className="h-3 w-3 mr-2" />
+                Stop All
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
