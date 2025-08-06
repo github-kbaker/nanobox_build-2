@@ -23,7 +23,15 @@ import {
   MemoryStick,
   Clock,
   Terminal,
-  Smartphone
+  Smartphone,
+  BarChart3,
+  Zap,
+  RefreshCw,
+  Search,
+  Filter,
+  TrendingUp,
+  Eye,
+  Settings
 } from 'lucide-react';
 
 const App = () => {
