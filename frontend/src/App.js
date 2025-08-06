@@ -42,6 +42,15 @@ const App = () => {
   const [newEnv, setNewEnv] = useState({ name: '', stack_type: '', description: '' });
   const [ws, setWs] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [refreshing, setRefreshing] = useState(false);
+  const [stats, setStats] = useState({
+    total: 0,
+    running: 0,
+    stopped: 0,
+    services: 0
+  });
 
   const backendUrl = process.env.REACT_APP_BACKEND_URL;
 
