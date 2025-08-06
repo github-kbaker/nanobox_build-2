@@ -104,13 +104,28 @@ const App = () => {
 
   const fetchEnvironments = async () => {
     try {
+      setRefreshing(true);
       const response = await fetch(`${backendUrl}/api/environments`);
       if (response.ok) {
         const data = await response.json();
         setEnvironments(data);
+        
+        // Calculate statistics
+        const totalServices = data.reduce((acc, env) => acc + env.services.length, 0);
+        const runningEnvs = data.filter(env => env.status === 'running').length;
+        const stoppedEnvs = data.filter(env => env.status === 'stopped').length;
+        
+        setStats({
+          total: data.length,
+          running: runningEnvs,
+          stopped: stoppedEnvs,
+          services: totalServices
+        });
       }
     } catch (error) {
       console.error('Error fetching environments:', error);
+    } finally {
+      setRefreshing(false);
     }
   };
 
