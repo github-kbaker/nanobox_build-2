@@ -214,7 +214,32 @@ const App = () => {
       case 'web': return <Globe className="h-4 w-4" />;
       case 'api': return <Server className="h-4 w-4" />;
       case 'cache': return <Activity className="h-4 w-4" />;
+      case 'runtime': return <Zap className="h-4 w-4" />;
       default: return <Server className="h-4 w-4" />;
+    }
+  };
+
+  // Filter environments based on search and status
+  const filteredEnvironments = environments.filter(env => {
+    const matchesSearch = env.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         env.stack_type.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = filterStatus === 'all' || env.status === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
+
+  const startAllEnvironments = async () => {
+    for (const env of environments) {
+      if (env.status === 'stopped') {
+        await startEnvironment(env.id);
+      }
+    }
+  };
+
+  const stopAllEnvironments = async () => {
+    for (const env of environments) {
+      if (env.status === 'running') {
+        await stopEnvironment(env.id);
+      }
     }
   };
 
