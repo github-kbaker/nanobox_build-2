@@ -419,30 +419,39 @@ const App = () => {
 
       {/* Main Content */}
       <div className="p-4 pb-20">
-        {environments.length === 0 ? (
+        {filteredEnvironments.length === 0 ? (
           <div className="text-center py-12">
             <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
               <Server className="h-8 w-8 text-slate-400" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-2">No Environments</h3>
-            <p className="text-slate-400 mb-6">Create your first development environment to get started</p>
-            <Button 
-              onClick={() => setIsCreateDialogOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create Environment
-            </Button>
+            <h3 className="text-xl font-semibold text-white mb-2">
+              {searchQuery || filterStatus !== 'all' ? 'No Matches Found' : 'No Environments'}
+            </h3>
+            <p className="text-slate-400 mb-6">
+              {searchQuery || filterStatus !== 'all' 
+                ? 'Try adjusting your search or filter criteria' 
+                : 'Create your first development environment to get started'
+              }
+            </p>
+            {!searchQuery && filterStatus === 'all' && (
+              <Button 
+                onClick={() => setIsCreateDialogOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Environment
+              </Button>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
-            {environments.map((env) => (
+            {filteredEnvironments.map((env) => (
               <Card key={env.id} className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
                       <CardTitle className="text-white flex items-center space-x-3">
-                        <span>{env.name}</span>
+                        <span className="text-sm">{env.name}</span>
                         <Badge 
                           variant="secondary" 
                           className={`${getStatusColor(env.status)} text-white text-xs px-2 py-1`}
@@ -450,11 +459,17 @@ const App = () => {
                           {env.status}
                         </Badge>
                       </CardTitle>
-                      <CardDescription className="text-slate-400 text-sm">
+                      <CardDescription className="text-slate-400 text-xs">
                         {env.stack_type} • {env.services.length} services
+                        {env.status === 'running' && (
+                          <div className="flex items-center mt-1 space-x-2">
+                            <TrendingUp className="h-3 w-3 text-green-400" />
+                            <span className="text-green-400">Live metrics updating</span>
+                          </div>
+                        )}
                       </CardDescription>
                       {env.description && (
-                        <p className="text-slate-300 text-sm mt-2">{env.description}</p>
+                        <p className="text-slate-300 text-xs mt-2">{env.description}</p>
                       )}
                     </div>
                     <div className="flex space-x-2">
@@ -463,26 +478,26 @@ const App = () => {
                           size="sm"
                           variant="outline"
                           onClick={() => stopEnvironment(env.id)}
-                          className="border-red-500 text-red-400 hover:bg-red-500 hover:text-white"
+                          className="border-red-500 text-red-400 hover:bg-red-500 hover:text-white h-8 w-8 p-0"
                         >
-                          <Square className="h-4 w-4" />
+                          <Square className="h-3 w-3" />
                         </Button>
                       ) : (
                         <Button
                           size="sm"
                           onClick={() => startEnvironment(env.id)}
-                          className="bg-green-600 hover:bg-green-700 text-white"
+                          className="bg-green-600 hover:bg-green-700 text-white h-8 w-8 p-0"
                         >
-                          <Play className="h-4 w-4" />
+                          <Play className="h-3 w-3" />
                         </Button>
                       )}
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => deleteEnvironment(env.id)}
-                        className="border-red-500 text-red-400 hover:bg-red-500 hover:text-white"
+                        className="border-red-500 text-red-400 hover:bg-red-500 hover:text-white h-8 w-8 p-0"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>
@@ -490,23 +505,23 @@ const App = () => {
                 <CardContent className="pt-0">
                   <Tabs defaultValue="services" className="w-full">
                     <TabsList className="grid w-full grid-cols-2 bg-slate-700">
-                      <TabsTrigger value="services" className="text-slate-200">Services</TabsTrigger>
-                      <TabsTrigger value="logs" className="text-slate-200">Logs</TabsTrigger>
+                      <TabsTrigger value="services" className="text-slate-200 text-xs">Services</TabsTrigger>
+                      <TabsTrigger value="logs" className="text-slate-200 text-xs">Logs</TabsTrigger>
                     </TabsList>
                     
                     <TabsContent value="services" className="mt-4">
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         {env.services.map((service) => (
                           <div
                             key={service.id}
-                            className="bg-slate-700/50 rounded-lg p-4 border border-slate-600"
+                            className="bg-slate-700/50 rounded-lg p-3 border border-slate-600"
                           >
                             <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center space-x-3">
+                              <div className="flex items-center space-x-2">
                                 {getServiceIcon(service.type)}
                                 <div>
-                                  <h4 className="text-white font-medium text-sm">{service.name}</h4>
-                                  <p className="text-slate-400 text-xs">Port {service.port}</p>
+                                  <h4 className="text-white font-medium text-xs">{service.name}</h4>
+                                  <p className="text-slate-400 text-xs">Port {service.port} • {service.type}</p>
                                 </div>
                               </div>
                               <div className="flex items-center space-x-2">
@@ -520,39 +535,51 @@ const App = () => {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => toggleService(service.id)}
-                                  className="border-slate-500 text-slate-300 hover:bg-slate-600 h-7 w-7 p-0"
+                                  className="border-slate-500 text-slate-300 hover:bg-slate-600 h-6 w-6 p-0"
                                 >
                                   {service.status === 'running' ? (
-                                    <Square className="h-3 w-3" />
+                                    <Square className="h-2 w-2" />
                                   ) : (
-                                    <Play className="h-3 w-3" />
+                                    <Play className="h-2 w-2" />
                                   )}
                                 </Button>
                               </div>
                             </div>
                             
                             {service.status === 'running' && (
-                              <div className="grid grid-cols-3 gap-4 mt-3">
+                              <div className="grid grid-cols-3 gap-3 mt-2">
                                 <div className="bg-slate-800/50 rounded p-2 text-center">
                                   <div className="flex items-center justify-center mb-1">
                                     <Cpu className="h-3 w-3 text-blue-400 mr-1" />
                                     <span className="text-xs text-slate-400">CPU</span>
                                   </div>
-                                  <p className="text-sm font-bold text-white">{service.cpu_usage}%</p>
+                                  <p className="text-xs font-bold text-white">{service.cpu_usage}%</p>
+                                  <div className="w-full bg-slate-600 rounded-full h-1 mt-1">
+                                    <div 
+                                      className="bg-blue-400 h-1 rounded-full transition-all duration-500"
+                                      style={{ width: `${service.cpu_usage}%` }}
+                                    ></div>
+                                  </div>
                                 </div>
                                 <div className="bg-slate-800/50 rounded p-2 text-center">
                                   <div className="flex items-center justify-center mb-1">
                                     <MemoryStick className="h-3 w-3 text-green-400 mr-1" />
                                     <span className="text-xs text-slate-400">RAM</span>
                                   </div>
-                                  <p className="text-sm font-bold text-white">{service.memory_usage}%</p>
+                                  <p className="text-xs font-bold text-white">{service.memory_usage}%</p>
+                                  <div className="w-full bg-slate-600 rounded-full h-1 mt-1">
+                                    <div 
+                                      className="bg-green-400 h-1 rounded-full transition-all duration-500"
+                                      style={{ width: `${service.memory_usage}%` }}
+                                    ></div>
+                                  </div>
                                 </div>
                                 <div className="bg-slate-800/50 rounded p-2 text-center">
                                   <div className="flex items-center justify-center mb-1">
                                     <Clock className="h-3 w-3 text-yellow-400 mr-1" />
                                     <span className="text-xs text-slate-400">Up</span>
                                   </div>
-                                  <p className="text-sm font-bold text-white">{service.uptime}</p>
+                                  <p className="text-xs font-bold text-white">{service.uptime}</p>
                                 </div>
                               </div>
                             )}
@@ -567,29 +594,32 @@ const App = () => {
                           <div key={service.id}>
                             <Button
                               variant="outline"
-                              className="w-full justify-between text-left border-slate-600 text-slate-300 hover:bg-slate-700"
+                              className="w-full justify-between text-left border-slate-600 text-slate-300 hover:bg-slate-700 text-xs py-2"
                               onClick={() => fetchServiceLogs(service.id)}
                             >
                               <div className="flex items-center space-x-2">
-                                <Terminal className="h-4 w-4" />
+                                <Terminal className="h-3 w-3" />
                                 <span>{service.name} logs</span>
+                                {service.status === 'running' && (
+                                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                                )}
                               </div>
-                              <Badge variant="secondary" className="bg-slate-600 text-slate-200">
+                              <Badge variant="secondary" className="bg-slate-600 text-slate-200 text-xs">
                                 {serviceLogs[service.id]?.length || 0}
                               </Badge>
                             </Button>
                             
                             {serviceLogs[service.id] && (
-                              <ScrollArea className="h-48 bg-slate-900/50 rounded border border-slate-600 mt-2">
-                                <div className="p-3 space-y-1">
+                              <ScrollArea className="h-32 bg-slate-900/50 rounded border border-slate-600 mt-2">
+                                <div className="p-2 space-y-1">
                                   {serviceLogs[service.id].map((log, idx) => (
-                                    <div key={idx} className="text-xs">
-                                      <span className={`inline-block w-16 font-mono ${
+                                    <div key={idx} className="text-xs font-mono">
+                                      <span className={`inline-block w-12 ${
                                         log.level === 'error' ? 'text-red-400' :
                                         log.level === 'warning' ? 'text-yellow-400' :
                                         'text-green-400'
                                       }`}>
-                                        [{log.level.toUpperCase()}]
+                                        [{log.level.toUpperCase().substring(0, 4)}]
                                       </span>
                                       <span className="text-slate-300 ml-2">{log.message}</span>
                                     </div>
