@@ -284,6 +284,11 @@ async def get_service_logs(service_id: str, limit: int = 50):
     
     return logs[::-1]  # Return in chronological order
 
+# Add this endpoint (around line 280, before the health check)
+@app.get("/api/")
+async def api_root():
+    return {"status": "healthy", "service": "Nanobox DevStack Manager", "message": "API is running"}
+    
 @app.put("/api/services/{service_id}/toggle")
 async def toggle_service(service_id: str):
     """Toggle service status (start/stop)"""
