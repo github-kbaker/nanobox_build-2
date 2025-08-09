@@ -74,6 +74,14 @@ async def get_status_checks():
     status_checks = await db.status_checks.find().to_list(1000)
     return [StatusCheck(**status_check) for status_check in status_checks]
 
+@api_router.get("/")
+async def api_root():
+    return {"status": "healthy", "service": "Nanobox DevStack Manager", "message": "API is running"}
+
+@api_router.head("/")
+async def api_root_head():
+    return {"status": "healthy"}
+    
 # Include the router in the main app
 app.include_router(api_router)
 
