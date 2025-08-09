@@ -25,6 +25,11 @@ app.add_middleware(
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 DB_NAME = os.environ.get('DB_NAME', 'nanobox_devstack')
 
+# Initialize collections as None first (ADD THESE LINES)
+environments_collection = None
+services_collection = None
+logs_collection = None
+
 try:
     client = MongoClient(MONGO_URL)
     db = client[DB_NAME]
