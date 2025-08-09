@@ -133,6 +133,9 @@ def generate_mock_metrics():
 @app.get("/api/environments", response_model=List[Environment])
 async def get_environments():
     """Get all development environments"""
+    if environments_collection is None:
+        raise HTTPException(status_code=503, detail="Database connection unavailable")
+    
     environments = []
     for env_doc in environments_collection.find():
         # Get services for this environment
