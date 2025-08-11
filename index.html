@@ -959,18 +959,17 @@ async function viewDockerLogs(id) {
 async function loadDashboard() {
     try {
         document.getElementById('api-base-url').textContent = API_BASE;
-        
         await checkApiHealth();
         await loadEnvironments();
-        await loadDockerInstances(); // Add this line
         
+        // THESE LINES SHOULD BE PRESENT (the fix):
         document.getElementById('loading').style.display = 'none';
         document.getElementById('status-bar').style.display = 'flex';
         document.getElementById('environments-container').style.display = 'block';
-        document.getElementById('docker-container').style.display = 'block'; // Add this line
         document.getElementById('api-info').style.display = 'block';
         
         updateStatusBar();
+        console.log('✅ Dashboard loaded successfully!');  // This line too
         
     } catch (error) {
         console.error('Failed to load dashboard:', error);
