@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -394,3 +395,168 @@ if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 8001))
     uvicorn.run(app, host="0.0.0.0", port=port)
+
+# Add these new models after existing imports
+from typing import Optional, List
+import uuid
+from enum import Enum
+
+class EnvironmentStatus(str, Enum):
+    running = "running"
+    stopped = "stopped" 
+    pending = "pending"
+
+class ServiceStatus(str, Enum):
+    running = "running"
+    stopped = "stopped"
+    pending = "pending"
+
+class Service(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    type: str
+    status: ServiceStatus = ServiceStatus.stopped
+    port: Optional[int] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class Environment(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    status: EnvironmentStatus = EnvironmentStatus.stopped
+    services: List[Service] = []
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class EnvironmentCreate(BaseModel):
+    name: str
+    services: List[dict] = []  # List of service configurations
+STEP 2: Add Environment Management Endpoints
+
+Add these endpoints after your existing endpoints:
+
+# Environment Management Endpoints
+
+@api_router.get("/environments", response_model=List[Environment])
+async def get_environments():
+    try:
+        environments = await db.environments.find().to_list(1000)
+        return [Environment(**env) for env in environments]
+    except Exception as e:
+        logging.error(f"Failed to get environments: {e}")
+        return {"detail": "Database connection unavailable"}
+
+@api_router.post("/environments", response_model=Environment)
+async def create_environment(env_data: EnvironmentCreate):
+    try:
+        # Create default services if none provided
+        default_services = [
+            {"name": "Frontend", "type": "web", "status": "stopped"},
+            {"name": "Backend API", "type": "api", "status": "stopped"},
+            {"name": "Database", "type": "database", "status": "stopped"}
+        ]
+        
+        services = []
+        service_configs = env_data.services if env_data.services else default_services
+        
+        for service_config in service_configs:
+            service = Service(
+                name=service_config.get("name", "Unknown Service"),
+                type=service_config.get("type", "service"),
+                status=ServiceStatus(service_config.get("status", "stopped"))
+            )
+            services.append(service)
+        
+        environment = Environment(
+            name=env_data.name,
+            status=EnvironmentStatus.stopped,
+            services=services
+        )
+        
+        # Save to database
+        env_dict = environment.dict()
+        await db.environments.insert_one(env_dict)
+        
+        return environment
+    
+    except Exception as e:
+        logging.error(f"Failed to create environment: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to create environment: {str(e)}")
+
+@api_router.put("/environments/{env_id}/start")
+async def start_environment(env_id: str):
+    try:
+        result = await db.environments.update_one(
+            {"id": env_id},
+            {
+                "$set": {
+                    "status": "running",
+                    "updated_at": datetime.utcnow(),
+                    "services.$[].status": "running"
+                }
+            }
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Environment not found")
+            
+        return {"message": f"Environment {env_id} started successfully"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to start environment: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to start environment: {str(e)}")
+
+@api_router.put("/environments/{env_id}/stop")
+async def stop_environment(env_id: str):
+    try:
+        result = await db.environments.update_one(
+            {"id": env_id},
+            {
+                "$set": {
+                    "status": "stopped",
+                    "updated_at": datetime.utcnow(),
+                    "services.$[].status": "stopped"
+                }
+            }
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Environment not found")
+            
+        return {"message": f"Environment {env_id} stopped successfully"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to stop environment: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to stop environment: {str(e)}")
+
+@api_router.delete("/environments/{env_id}")
+async def delete_environment(env_id: str):
+    try:
+        result = await db.environments.delete_one({"id": env_id})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Environment not found")
+            
+        return {"message": f"Environment {env_id} deleted successfully"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to delete environment: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete environment: {str(e)}")
+
+@api_router.get("/services/{service_id}/logs")
+async def get_service_logs(service_id: str):
+    # Mock logs for now - you can implement real log retrieval later
+    mock_logs = [
+        "2025-08-11 01:30:00 - Service started",
+        "2025-08-11 01:30:01 - Initializing connections",
+        "2025-08-11 01:30:02 - Service ready",
+        "2025-08-11 01:30:15 - Processing requests",
+        "2025-08-11 01:30:30 - Health check passed"
+    ]
+    
+    return {"logs": mock_logs, "service_id": service_id}
