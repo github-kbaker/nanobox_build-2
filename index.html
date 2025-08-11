@@ -620,27 +620,112 @@
             }
         }
         
-// Environment actions
-function createEnvironment() {
-    alert('🚀 Create Environment functionality would integrate with POST /api/environments');
-}
-
-function startEnvironment(id) {
-    alert(`▶️ Starting environment: ${id}`);
-}
-
-function stopEnvironment(id) {
-    alert(`⏹️ Stopping environment: ${id}`);
-}
-
-function deleteEnvironment(id) {
-    if (confirm(`🗑️ Are you sure you want to delete environment: ${id}?`)) {
-        alert(`Environment ${id} deleted`);
+// Environment actions - REAL API CALLS
+async function createEnvironment() {
+    const envName = prompt('Enter environment name:', 'My Development Environment');
+    if (!envName) return;
+    
+    try {
+        const response = await fetch(`${API_BASE}/environments`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: envName,
+                services: [
+                    {name: 'React Frontend', type: 'web', status: 'stopped'},
+                    {name: 'FastAPI Backend', type: 'api', status: 'stopped'},
+                    {name: 'MongoDB', type: 'database', status: 'stopped'}
+                ]
+            })
+        });
+        
+        if (response.ok) {
+            alert(`✅ Environment "${envName}" created successfully!`);
+            loadDashboard(); // Refresh the dashboard
+        } else {
+            alert('❌ Failed to create environment');
+        }
+    } catch (error) {
+        console.error('Error creating environment:', error);
+        alert('❌ Error creating environment');
     }
 }
 
-function viewLogs(id) {
-    alert(`📋 Viewing logs for environment: ${id}`);
+async function startEnvironment(id) {
+    try {
+        const response = await fetch(`${API_BASE}/environments/${id}/start`, {
+            method: 'PUT'
+        });
+        
+        if (response.ok) {
+            alert(`✅ Environment started successfully!`);
+            loadDashboard(); // Refresh the dashboard
+        } else {
+            alert('❌ Failed to start environment');
+        }
+    } catch (error) {
+        console.error('Error starting environment:', error);
+        alert('❌ Error starting environment');
+    }
+}
+
+async function stopEnvironment(id) {
+    try {
+        const response = await fetch(`${API_BASE}/environments/${id}/stop`, {
+            method: 'PUT'
+        });
+        
+        if (response.ok) {
+            alert(`✅ Environment stopped successfully!`);
+            loadDashboard(); // Refresh the dashboard
+        } else {
+            alert('❌ Failed to stop environment');
+        }
+    } catch (error) {
+        console.error('Error stopping environment:', error);
+        alert('❌ Error stopping environment');
+    }
+}
+
+async function deleteEnvironment(id) {
+    if (!confirm(`🗑️ Are you sure you want to delete this environment?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/environments/${id}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            alert(`✅ Environment deleted successfully!`);
+            loadDashboard(); // Refresh the dashboard
+        } else {
+            alert('❌ Failed to delete environment');
+        }
+    } catch (error) {
+        console.error('Error deleting environment:', error);
+        alert('❌ Error deleting environment');
+    }
+}
+
+async function viewLogs(id) {
+    try {
+        const response = await fetch(`${API_BASE}/services/${id}/logs`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            const logs = data.logs.join('\n');
+            alert(`📋 Service Logs:\n\n${logs}`);
+        } else {
+            alert('❌ Failed to retrieve logs');
+        }
+    } catch (error) {
+        console.error('Error getting logs:', error);
+        alert('❌ Error retrieving logs');
+    }
 }
         
         // Error handling
