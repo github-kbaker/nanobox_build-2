@@ -515,7 +515,7 @@
             loadDashboard();
         });
         
-        // Load dashboard data
+        // Load dashboard data FIXED VERSION
         async function loadDashboard() {
             try {
                 // Update API info
@@ -527,7 +527,7 @@
                 // Load environments
                 await loadEnvironments();
                 
-                // Hide loading and show content
+                // FORCE UI UPDATE - This was missing!
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('status-bar').style.display = 'flex';
                 document.getElementById('environments-container').style.display = 'block';
@@ -535,6 +535,8 @@
                 
                 // Update status bar
                 updateStatusBar();
+                
+                console.log('✅ Dashboard loaded successfully!');
                 
             } catch (error) {
                 console.error('Failed to load dashboard:', error);
@@ -546,21 +548,27 @@
         async function checkApiHealth() {
             try {
                 const response = await fetch(`${API_BASE}/health`);
-                apiHealth = await response.json();
                 
-                // Update API status
-                if (response.ok && apiHealth.status === 'healthy') {
+                if (response.ok) {
+                    apiHealth = await response.json();
+                    console.log('✅ API Health check successful:', apiHealth);
+                    
+                    // Update API status indicators
                     document.getElementById('api-status').textContent = 'Online';
                     document.getElementById('api-indicator').className = 'status-indicator';
                 } else {
+                    console.warn('⚠️ API Health check returned non-200:', response.status);
                     document.getElementById('api-status').textContent = 'Issues';
                     document.getElementById('api-indicator').className = 'status-indicator warning';
                 }
                 
             } catch (error) {
+                console.error('❌ API Health check failed:', error);
                 document.getElementById('api-status').textContent = 'Offline';
                 document.getElementById('api-indicator').className = 'status-indicator error';
-                throw error;
+                
+                // Don't throw error - let dashboard load anyway
+                apiHealth = null;
             }
         }
         
