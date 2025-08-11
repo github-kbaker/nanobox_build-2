@@ -66,6 +66,32 @@ class EnvironmentCreate(BaseModel):
     name: str
     services: Optional[List[dict]] = []
 
+class DockerInstanceStatus(str, Enum):
+    running = "running"
+    stopped = "stopped"
+    paused = "paused"
+    restarting = "restarting"
+    dead = "dead"
+
+class DockerInstance(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    container_id: Optional[str] = None
+    name: str
+    image: str
+    status: DockerInstanceStatus = DockerInstanceStatus.stopped
+    ports: Optional[Dict[str, str]] = {}
+    environment_vars: Optional[Dict[str, str]] = {}
+    volumes: Optional[Dict[str, str]] = {}
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class DockerInstanceCreate(BaseModel):
+    name: str
+    image: str
+    ports: Optional[Dict[str, str]] = {}
+    environment_vars: Optional[Dict[str, str]] = {}
+    volumes: Optional[Dict[str, str]] = {}
+
 # Database connection
 try:
     client = AsyncIOMotorClient(MONGO_URL)
@@ -260,6 +286,207 @@ async def get_service_logs(service_id: str):
     
     return {"logs": mock_logs, "service_id": service_id}
 
+# Docker Management Endpoints
+
+@api_router.get("/docker/instances", response_model=List[DockerInstance])
+async def get_docker_instances():
+    """Get all Docker instances"""
+    try:
+        instances = await db.docker_instances.find().to_list(1000)
+        return [DockerInstance(**instance) for instance in instances]
+    except Exception as e:
+        logging.error(f"Failed to get Docker instances: {e}")
+        return []
+
+@api_router.post("/docker/instances", response_model=DockerInstance)
+async def create_docker_instance(instance_data: DockerInstanceCreate):
+    """Create a new Docker instance"""
+    try:
+        instance = DockerInstance(
+            name=instance_data.name,
+            image=instance_data.image,
+            ports=instance_data.ports or {},
+            environment_vars=instance_data.environment_vars or {},
+            volumes=instance_data.volumes or {},
+            status=DockerInstanceStatus.stopped
+        )
+        
+        # Save to database
+        instance_dict = instance.dict()
+        await db.docker_instances.insert_one(instance_dict)
+        
+        logging.info(f"Created Docker instance: {instance.name}")
+        return instance
+        
+    except Exception as e:
+        logging.error(f"Failed to create Docker instance: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to create Docker instance: {str(e)}")
+
+@api_router.put("/docker/instances/{instance_id}/start")
+async def start_docker_instance(instance_id: str):
+    """Start a Docker container"""
+    try:
+        # Get instance from database
+        instance = await db.docker_instances.find_one({"id": instance_id})
+        if not instance:
+            raise HTTPException(status_code=404, detail="Docker instance not found")
+        
+        # Build docker run command
+        cmd = ["docker", "run", "-d", "--name", instance["name"]]
+        
+        # Add port mappings
+        for container_port, host_port in instance.get("ports", {}).items():
+            cmd.extend(["-p", f"{host_port}:{container_port}"])
+        
+        # Add environment variables
+        for env_key, env_value in instance.get("environment_vars", {}).items():
+            cmd.extend(["-e", f"{env_key}={env_value}"])
+        
+        # Add volume mounts
+        for host_path, container_path in instance.get("volumes", {}).items():
+            cmd.extend(["-v", f"{host_path}:{container_path}"])
+        
+        # Add image
+        cmd.append(instance["image"])
+        
+        # Execute docker command
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            container_id = result.stdout.strip()
+            
+            # Update database with container ID and status
+            await db.docker_instances.update_one(
+                {"id": instance_id},
+                {
+                    "$set": {
+                        "container_id": container_id,
+                        "status": "running",
+                        "updated_at": datetime.utcnow()
+                    }
+                }
+            )
+            
+            return {"message": f"Docker instance {instance['name']} started successfully", "container_id": container_id}
+        else:
+            raise HTTPException(status_code=500, detail=f"Failed to start container: {result.stderr}")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to start Docker instance: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to start Docker instance: {str(e)}")
+
+@api_router.put("/docker/instances/{instance_id}/stop")
+async def stop_docker_instance(instance_id: str):
+    """Stop a Docker container"""
+    try:
+        # Get instance from database
+        instance = await db.docker_instances.find_one({"id": instance_id})
+        if not instance:
+            raise HTTPException(status_code=404, detail="Docker instance not found")
+        
+        if not instance.get("container_id"):
+            raise HTTPException(status_code=400, detail="No running container found")
+        
+        # Stop the container
+        result = subprocess.run(["docker", "stop", instance["container_id"]], capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            # Update database
+            await db.docker_instances.update_one(
+                {"id": instance_id},
+                {
+                    "$set": {
+                        "status": "stopped",
+                        "updated_at": datetime.utcnow()
+                    }
+                }
+            )
+            
+            return {"message": f"Docker instance {instance['name']} stopped successfully"}
+        else:
+            raise HTTPException(status_code=500, detail=f"Failed to stop container: {result.stderr}")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to stop Docker instance: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to stop Docker instance: {str(e)}")
+
+@api_router.delete("/docker/instances/{instance_id}")
+async def delete_docker_instance(instance_id: str):
+    """Delete a Docker instance (stops and removes container)"""
+    try:
+        # Get instance from database
+        instance = await db.docker_instances.find_one({"id": instance_id})
+        if not instance:
+            raise HTTPException(status_code=404, detail="Docker instance not found")
+        
+        # Stop and remove container if it exists
+        if instance.get("container_id"):
+            subprocess.run(["docker", "stop", instance["container_id"]], capture_output=True)
+            subprocess.run(["docker", "rm", instance["container_id"]], capture_output=True)
+        
+        # Remove from database
+        result = await db.docker_instances.delete_one({"id": instance_id})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Docker instance not found")
+            
+        return {"message": f"Docker instance {instance['name']} deleted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Failed to delete Docker instance: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete Docker instance: {str(e)}")
+
+@api_router.get("/docker/instances/{instance_id}/logs")
+async def get_docker_logs(instance_id: str):
+    """Get logs from a Docker container"""
+    try:
+        # Get instance from database
+        instance = await db.docker_instances.find_one({"id": instance_id})
+        if not instance:
+            raise HTTPException(status_code=404, detail="Docker instance not found")
+        
+        if not instance.get("container_id"):
+            return {"logs": ["Container not running"], "instance_id": instance_id}
+        
+        # Get container logs
+        result = subprocess.run(
+            ["docker", "logs", "--tail", "100", instance["container_id"]], 
+            capture_output=True, text=True
+        )
+        
+        if result.returncode == 0:
+            logs = result.stdout.split('\n') if result.stdout else []
+            return {"logs": logs, "instance_id": instance_id}
+        else:
+            return {"logs": [f"Error getting logs: {result.stderr}"], "instance_id": instance_id}
+            
+    except Exception as e:
+        logging.error(f"Failed to get Docker logs: {e}")
+        return {"logs": [f"Error: {str(e)}"], "instance_id": instance_id}
+
+@api_router.get("/docker/images")
+async def get_docker_images():
+    """Get available Docker images"""
+    try:
+        result = subprocess.run(["docker", "images", "--format", "table {{.Repository}}:{{.Tag}}"], 
+                              capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            images = [line.strip() for line in result.stdout.split('\n')[1:] if line.strip()]
+            return {"images": images}
+        else:
+            return {"images": []}
+            
+    except Exception as e:
+        logging.error(f"Failed to get Docker images: {e}")
+        return {"images": []}
+        
 # Include the API router
 app.include_router(api_router)
 
