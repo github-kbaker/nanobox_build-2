@@ -346,6 +346,76 @@
             word-break: break-all;
         }
         
+        .docker-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+            border-left: 5px solid #0066cc;
+        }
+        
+        .docker-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+        }
+        
+        .docker-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .docker-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #333;
+        }
+        
+        .docker-image {
+            font-size: 0.9rem;
+            color: #666;
+            font-family: monospace;
+            background: rgba(0,0,0,0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        
+        .docker-info {
+            margin-bottom: 15px;
+        }
+        
+        .docker-info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .docker-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+        }
+        
+        .btn-docker {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-docker:hover {
+            transform: translateY(-1px);
+        }
+
         #loading {
             text-align: center;
             padding: 40px;
@@ -694,6 +764,209 @@ async function stopEnvironment(id) {
     } catch (error) {
         console.error('Error stopping environment:', error);
         alert('❌ Error stopping environment');
+    }
+}
+
+// Docker Management Functions
+let dockerInstances = [];
+
+async function loadDockerInstances() {
+    try {
+        const response = await fetch(`${API_BASE}/docker/instances`);
+        dockerInstances = await response.json();
+        displayDockerInstances();
+    } catch (error) {
+        console.error('Failed to load Docker instances:', error);
+        dockerInstances = [];
+        displayDockerInstances();
+    }
+}
+
+function displayDockerInstances() {
+    const container = document.getElementById('docker-instances-grid');
+    
+    if (dockerInstances.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">🐳</div>
+                <h3>No Docker Instances</h3>
+                <p>Create your first Docker container to get started.</p>
+                <button class="create-env-btn" onclick="createDockerInstance()">
+                    Create Docker Container
+                </button>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = `
+        <div class="environments-grid">
+            ${dockerInstances.map(instance => createDockerCard(instance)).join('')}
+        </div>
+    `;
+}
+
+function createDockerCard(instance) {
+    const statusColor = instance.status === 'running' ? 'running' : 'stopped';
+    const ports = Object.entries(instance.ports || {}).map(([cp, hp]) => `${hp}:${cp}`).join(', ') || 'None';
+    
+    const actions = instance.status === 'running' ? 
+        `<button class="btn-docker btn-warning" onclick="stopDockerInstance('${instance.id}')">Stop</button>
+         <button class="btn-docker btn-primary" onclick="viewDockerLogs('${instance.id}')">Logs</button>` :
+        `<button class="btn-docker btn-success" onclick="startDockerInstance('${instance.id}')">Start</button>
+         <button class="btn-docker btn-danger" onclick="deleteDockerInstance('${instance.id}')">Delete</button>`;
+    
+    return `
+        <div class="docker-card">
+            <div class="docker-header">
+                <div class="docker-name">${instance.name}</div>
+                <div class="env-status ${statusColor}">${instance.status.toUpperCase()}</div>
+            </div>
+            <div class="docker-image">Image: ${instance.image}</div>
+            <div class="docker-info">
+                <div class="docker-info-item">
+                    <span>Ports:</span>
+                    <span>${ports}</span>
+                </div>
+                <div class="docker-info-item">
+                    <span>Container ID:</span>
+                    <span>${instance.container_id ? instance.container_id.substring(0, 12) : 'Not running'}</span>
+                </div>
+            </div>
+            <div class="docker-actions">
+                ${actions}
+            </div>
+        </div>
+    `;
+}
+
+async function createDockerInstance() {
+    const name = prompt('Container name:', 'my-container');
+    if (!name) return;
+    
+    const image = prompt('Docker image (e.g., nginx:latest, node:18):', 'nginx:latest');
+    if (!image) return;
+    
+    const hostPort = prompt('Host port (optional):', '8080');
+    const containerPort = prompt('Container port (optional):', '80');
+    
+    const ports = (hostPort && containerPort) ? {[containerPort]: hostPort} : {};
+    
+    try {
+        const response = await fetch(`${API_BASE}/docker/instances`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                name: name,
+                image: image,
+                ports: ports
+            })
+        });
+        
+        if (response.ok) {
+            alert(`✅ Docker instance "${name}" created successfully!`);
+            loadDockerInstances();
+        } else {
+            const error = await response.text();
+            alert(`❌ Failed to create Docker instance: ${error}`);
+        }
+    } catch (error) {
+        alert(`❌ Error: ${error.message}`);
+    }
+}
+
+async function startDockerInstance(id) {
+    try {
+        const response = await fetch(`${API_BASE}/docker/instances/${id}/start`, {
+            method: 'PUT'
+        });
+        
+        if (response.ok) {
+            alert('✅ Docker container started successfully!');
+            loadDockerInstances();
+        } else {
+            const error = await response.text();
+            alert(`❌ Failed to start container: ${error}`);
+        }
+    } catch (error) {
+        alert(`❌ Error: ${error.message}`);
+    }
+}
+
+async function stopDockerInstance(id) {
+    try {
+        const response = await fetch(`${API_BASE}/docker/instances/${id}/stop`, {
+            method: 'PUT'
+        });
+        
+        if (response.ok) {
+            alert('✅ Docker container stopped successfully!');
+            loadDockerInstances();
+        } else {
+            alert('❌ Failed to stop container');
+        }
+    } catch (error) {
+        alert(`❌ Error: ${error.message}`);
+    }
+}
+
+async function deleteDockerInstance(id) {
+    if (!confirm('🗑️ Delete this Docker instance? This will stop and remove the container.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/docker/instances/${id}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            alert('✅ Docker instance deleted successfully!');
+            loadDockerInstances();
+        } else {
+            alert('❌ Failed to delete Docker instance');
+        }
+    } catch (error) {
+        alert(`❌ Error: ${error.message}`);
+    }
+}
+
+async function viewDockerLogs(id) {
+    try {
+        const response = await fetch(`${API_BASE}/docker/instances/${id}/logs`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            const logs = data.logs.join('\n');
+            alert(`📋 Docker Container Logs:\n\n${logs}`);
+        } else {
+            alert('❌ Failed to retrieve logs');
+        }
+    } catch (error) {
+        alert(`❌ Error retrieving logs: ${error.message}`);
+    }
+}
+
+// Update main dashboard load function
+async function loadDashboard() {
+    try {
+        document.getElementById('api-base-url').textContent = API_BASE;
+        
+        await checkApiHealth();
+        await loadEnvironments();
+        await loadDockerInstances(); // Add this line
+        
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('status-bar').style.display = 'flex';
+        document.getElementById('environments-container').style.display = 'block';
+        document.getElementById('docker-container').style.display = 'block'; // Add this line
+        document.getElementById('api-info').style.display = 'block';
+        
+        updateStatusBar();
+        
+    } catch (error) {
+        console.error('Failed to load dashboard:', error);
+        showError('Failed to connect to Nanobox DevStack API');
     }
 }
 
