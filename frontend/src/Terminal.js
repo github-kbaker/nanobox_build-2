@@ -152,7 +152,7 @@ const TerminalModal = ({ container, onClose }) => {
 
   const getTestCredentials = (username) => {
     const testPasswords = {
-      'testuser': 'testpass123',
+      'testuser': '7s2253Y',
       'admin': 'admin123',
       'developer': 'dev123',
       'nanobox': 'nanobox123'
