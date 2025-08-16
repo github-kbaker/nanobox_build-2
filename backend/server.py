@@ -124,44 +124,52 @@ def get_resource_metrics():
             network_sent=0.0, network_recv=0.0
         )
 
+# Container state storage (in a real app, this would be in a database)
+container_states = {
+    "nanobox-web-001": "running",
+    "nanobox-api-001": "running", 
+    "nanobox-db-001": "running",
+    "nanobox-cache-001": "stopped"
+}
+
 def get_mock_containers():
     """Generate mock container data for demo purposes"""
     containers = [
         {
             "id": "nanobox-web-001",
             "name": "nanobox-web",
-            "status": "running",
+            "status": container_states["nanobox-web-001"],
             "image": "nginx:1.21-alpine",
             "ports": ["80:8080", "443:8443"],
-            "cpu_usage": round(random.uniform(5, 25), 1),
-            "memory_usage": round(random.uniform(10, 50), 1)
+            "cpu_usage": round(random.uniform(5, 25), 1) if container_states["nanobox-web-001"] == "running" else 0.0,
+            "memory_usage": round(random.uniform(10, 50), 1) if container_states["nanobox-web-001"] == "running" else 0.0
         },
         {
             "id": "nanobox-api-001",
             "name": "nanobox-api",
-            "status": "running",
+            "status": container_states["nanobox-api-001"],
             "image": "python:3.9-slim",
             "ports": ["8001:8001"],
-            "cpu_usage": round(random.uniform(2, 15), 1),
-            "memory_usage": round(random.uniform(15, 40), 1)
+            "cpu_usage": round(random.uniform(2, 15), 1) if container_states["nanobox-api-001"] == "running" else 0.0,
+            "memory_usage": round(random.uniform(15, 40), 1) if container_states["nanobox-api-001"] == "running" else 0.0
         },
         {
             "id": "nanobox-db-001",
             "name": "nanobox-db",
-            "status": "running",
+            "status": container_states["nanobox-db-001"],
             "image": "mongodb:5.0",
             "ports": ["27017:27017"],
-            "cpu_usage": round(random.uniform(1, 10), 1),
-            "memory_usage": round(random.uniform(20, 60), 1)
+            "cpu_usage": round(random.uniform(1, 10), 1) if container_states["nanobox-db-001"] == "running" else 0.0,
+            "memory_usage": round(random.uniform(20, 60), 1) if container_states["nanobox-db-001"] == "running" else 0.0
         },
         {
             "id": "nanobox-cache-001",
             "name": "nanobox-cache",
-            "status": "stopped",
+            "status": container_states["nanobox-cache-001"],
             "image": "redis:6.2-alpine",
             "ports": ["6379:6379"],
-            "cpu_usage": 0.0,
-            "memory_usage": 0.0
+            "cpu_usage": round(random.uniform(1, 5), 1) if container_states["nanobox-cache-001"] == "running" else 0.0,
+            "memory_usage": round(random.uniform(5, 20), 1) if container_states["nanobox-cache-001"] == "running" else 0.0
         }
     ]
     
