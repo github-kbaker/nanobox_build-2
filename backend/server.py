@@ -101,6 +101,22 @@ class TerminalSession(BaseModel):
     last_activity: datetime
 
 # Helper functions for system monitoring
+def authenticate_user(username: str, password: str) -> bool:
+    """Authenticate user for terminal access"""
+    return TEST_USERS.get(username) == password
+
+def create_terminal_session(container_id: str, username: str) -> str:
+    """Create a new terminal session"""
+    session_id = str(uuid.uuid4())
+    active_sessions[session_id] = {
+        "container_id": container_id,
+        "username": username,
+        "created_at": datetime.utcnow(),
+        "last_activity": datetime.utcnow(),
+        "pty": None
+    }
+    return session_id
+
 def get_system_status():
     """Get current system status and metrics"""
     try:
