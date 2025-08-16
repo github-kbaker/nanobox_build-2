@@ -394,12 +394,21 @@ const Dashboard = () => {
                     key={container.id}
                     container={container}
                     onAction={handleContainerAction}
+                    onTerminal={handleTerminalAccess}
                   />
                 ))}
               </tbody>
             </table>
           </div>
         </div>
+        
+        {/* Terminal Modal */}
+        {showTerminal && selectedContainer && (
+          <TerminalModal
+            container={selectedContainer}
+            onClose={handleCloseTerminal}
+          />
+        )}
       </div>
     </div>
   );
