@@ -127,25 +127,44 @@ const TerminalModal = ({ container, onClose }) => {
   };
 
   const connectWebSocket = (terminal) => {
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${wsProtocol}//${BACKEND_URL.replace(/^https?:\/\//, '')}/api/nanobox/containers/${container.id}/terminal/${sessionId}`;
+    // For local development, use ws:// and for production use wss://
+    const baseUrl = BACKEND_URL.replace(/^https?:\/\//, '');
+    const wsProtocol = BACKEND_URL.startsWith('https://') ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${baseUrl}/api/nanobox/containers/${container.id}/terminal/${sessionId}`;
+    
+    console.log('Connecting to WebSocket:', wsUrl);
     
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
     
     ws.onopen = () => {
+      console.log('WebSocket connected');
       terminal.writeln('Terminal connected...');
     };
     
     ws.onmessage = (event) => {
+      console.log('WebSocket message received:', event.data);
       terminal.write(event.data);
     };
     
-    ws.onclose = () => {
-      terminal.writeln('\r\n\r\nConnection closed.');
+    ws.onclose = (event) => {
+      console.log('WebSocket closed:', event.code, event.reason);
+      if (event.code !== 1000) {
+        terminal.writeln(`\r\nConnection closed unexpectedly (${event.code}: ${event.reason})`);
+        terminal.writeln('\r\nTrying to reconnect...');
+        // Attempt reconnect after 2 seconds
+        setTimeout(() => {
+          if (wsRef.current?.readyState === WebSocket.CLOSED) {
+            connectWebSocket(terminal);
+          }
+        }, 2000);
+      } else {
+        terminal.writeln('\r\nConnection closed.');
+      }
     };
     
     ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
       terminal.writeln(`\r\nConnection error: ${error.message || 'Unknown error'}`);
     };
   };
