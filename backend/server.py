@@ -38,7 +38,7 @@ security = HTTPBasic()
 
 # Test users for container access
 TEST_USERS = {
-    "testuser": "testpass123",
+    "testuser": "7s2253Y",
     "admin": "admin123", 
     "developer": "dev123",
     "nanobox": "nanobox123"
