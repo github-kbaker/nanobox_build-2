@@ -38,6 +38,37 @@ class StatusCheck(BaseModel):
 class StatusCheckCreate(BaseModel):
     client_name: str
 
+class SystemStatus(BaseModel):
+    status: str
+    uptime: str
+    cpu_usage: float
+    memory_usage: float
+    disk_usage: float
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+class ContainerInfo(BaseModel):
+    id: str
+    name: str
+    status: str
+    image: str
+    created: datetime
+    ports: List[str]
+    cpu_usage: float
+    memory_usage: float
+
+class ResourceMetrics(BaseModel):
+    cpu_usage: float
+    cpu_count: int
+    memory_total: float
+    memory_available: float
+    memory_usage: float
+    disk_total: float
+    disk_free: float
+    disk_usage: float
+    network_sent: float
+    network_recv: float
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
