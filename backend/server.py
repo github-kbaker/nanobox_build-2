@@ -218,35 +218,44 @@ async def get_containers():
 @api_router.post("/nanobox/containers/{container_id}/start")
 async def start_container(container_id: str):
     """Start a container"""
-    # In a real implementation, this would use Docker API
-    await asyncio.sleep(1)  # Simulate operation delay
-    return {
-        "message": f"Container {container_id} started successfully",
-        "status": "running",
-        "timestamp": datetime.utcnow()
-    }
+    if container_id in container_states:
+        container_states[container_id] = "running"
+        await asyncio.sleep(1)  # Simulate operation delay
+        return {
+            "message": f"Container {container_id} started successfully",
+            "status": "running",
+            "timestamp": datetime.utcnow()
+        }
+    else:
+        raise HTTPException(status_code=404, detail=f"Container {container_id} not found")
 
 @api_router.post("/nanobox/containers/{container_id}/stop")
 async def stop_container(container_id: str):
     """Stop a container"""
-    # In a real implementation, this would use Docker API
-    await asyncio.sleep(1)  # Simulate operation delay
-    return {
-        "message": f"Container {container_id} stopped successfully",
-        "status": "stopped",
-        "timestamp": datetime.utcnow()
-    }
+    if container_id in container_states:
+        container_states[container_id] = "stopped"
+        await asyncio.sleep(1)  # Simulate operation delay
+        return {
+            "message": f"Container {container_id} stopped successfully",
+            "status": "stopped",
+            "timestamp": datetime.utcnow()
+        }
+    else:
+        raise HTTPException(status_code=404, detail=f"Container {container_id} not found")
 
 @api_router.post("/nanobox/containers/{container_id}/restart")
 async def restart_container(container_id: str):
     """Restart a container"""
-    # In a real implementation, this would use Docker API
-    await asyncio.sleep(2)  # Simulate operation delay
-    return {
-        "message": f"Container {container_id} restarted successfully",
-        "status": "running",
-        "timestamp": datetime.utcnow()
-    }
+    if container_id in container_states:
+        container_states[container_id] = "running"
+        await asyncio.sleep(2)  # Simulate operation delay
+        return {
+            "message": f"Container {container_id} restarted successfully",
+            "status": "running",
+            "timestamp": datetime.utcnow()
+        }
+    else:
+        raise HTTPException(status_code=404, detail=f"Container {container_id} not found")
 
 @api_router.post("/status", response_model=StatusCheck)
 async def create_status_check(input: StatusCheckCreate):
