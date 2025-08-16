@@ -88,6 +88,18 @@ class ResourceMetrics(BaseModel):
     network_recv: float
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
+class TerminalAuth(BaseModel):
+    username: str
+    password: str
+    container_id: str
+
+class TerminalSession(BaseModel):
+    session_id: str
+    container_id: str
+    username: str
+    created_at: datetime
+    last_activity: datetime
+
 # Helper functions for system monitoring
 def get_system_status():
     """Get current system status and metrics"""
