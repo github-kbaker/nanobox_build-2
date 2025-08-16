@@ -170,7 +170,7 @@ def get_mock_containers():
         name=c["name"],
         status=c["status"],
         image=c["image"],
-        created=datetime.now() - datetime.timedelta(seconds=random.randint(3600, 86400)),
+        created=datetime.now() - timedelta(seconds=random.randint(3600, 86400)),
         ports=c["ports"],
         cpu_usage=c["cpu_usage"],
         memory_usage=c["memory_usage"]
