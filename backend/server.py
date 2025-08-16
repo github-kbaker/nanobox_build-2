@@ -347,17 +347,24 @@ async def get_test_users(container_id: str):
 @api_router.websocket("/nanobox/containers/{container_id}/terminal/{session_id}")
 async def terminal_websocket(websocket: WebSocket, container_id: str, session_id: str):
     """WebSocket endpoint for terminal interaction"""
+    logger.info(f"Terminal WebSocket connection attempt: container={container_id}, session={session_id}")
+    
     await websocket.accept()
+    logger.info(f"WebSocket accepted for session {session_id}")
     
     # Validate session
     if session_id not in active_sessions:
+        logger.warning(f"Invalid session {session_id}")
         await websocket.close(code=1008, reason="Invalid session")
         return
     
     session = active_sessions[session_id]
     if session["container_id"] != container_id:
+        logger.warning(f"Session container mismatch: expected {container_id}, got {session['container_id']}")
         await websocket.close(code=1008, reason="Session container mismatch")
         return
+    
+    logger.info(f"Session validated for user {session['username']} on container {container_id}")
     
     try:
         # Simulate terminal environment
@@ -367,10 +374,14 @@ async def terminal_websocket(websocket: WebSocket, container_id: str, session_id
         await websocket.send_text(f"Connected at: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}\r\n")
         await websocket.send_text(f"\r\n{session['username']}@{container_id.split('-')[0]}:~$ ")
         
+        logger.info(f"Terminal prompt sent for session {session_id}")
+        
         while True:
             try:
                 # Wait for user input
                 data = await websocket.receive_text()
+                logger.debug(f"Received data from session {session_id}: {data}")
+                
                 command_data = json.loads(data)
                 
                 if command_data.get("type") == "input":
@@ -421,18 +432,24 @@ async def terminal_websocket(websocket: WebSocket, container_id: str, session_id
                     session["last_activity"] = datetime.utcnow()
                     
             except WebSocketDisconnect:
+                logger.info(f"WebSocket disconnected for session {session_id}")
                 break
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON decode error in session {session_id}: {e}")
+                await websocket.send_text(f"\r\nError: Invalid input format\r\n")
             except Exception as e:
-                logger.error(f"Terminal error: {e}")
+                logger.error(f"Terminal error in session {session_id}: {e}")
                 break
                 
     except WebSocketDisconnect:
-        pass
+        logger.info(f"WebSocket disconnected during setup for session {session_id}")
+    except Exception as e:
+        logger.error(f"WebSocket error for session {session_id}: {e}")
     finally:
         # Clean up session
         if session_id in active_sessions:
             del active_sessions[session_id]
-        logger.info(f"Terminal session {session_id} closed")
+        logger.info(f"Terminal session {session_id} closed and cleaned up")
 
 @api_router.post("/status", response_model=StatusCheck)
 async def create_status_check(input: StatusCheckCreate):
