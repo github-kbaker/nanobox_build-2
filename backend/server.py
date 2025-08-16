@@ -387,8 +387,7 @@ async def terminal_websocket(websocket: WebSocket, container_id: str, session_id
                 if command_data.get("type") == "input":
                     user_input = command_data.get("data", "")
                     
-                    # Echo input
-                    await websocket.send_text(user_input)
+                    # Don't echo input since frontend handles it now
                     
                     # Process command (simulated)
                     if user_input.strip() == "":
