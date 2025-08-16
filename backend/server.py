@@ -304,6 +304,136 @@ async def restart_container(container_id: str):
     else:
         raise HTTPException(status_code=404, detail=f"Container {container_id} not found")
 
+# Terminal access endpoints
+@api_router.post("/nanobox/containers/{container_id}/terminal/auth")
+async def authenticate_terminal_access(container_id: str, auth_data: TerminalAuth):
+    """Authenticate user for terminal access to container"""
+    if container_id not in container_states:
+        raise HTTPException(status_code=404, detail=f"Container {container_id} not found")
+    
+    if container_states[container_id] != "running":
+        raise HTTPException(status_code=400, detail=f"Container {container_id} is not running")
+    
+    if not authenticate_user(auth_data.username, auth_data.password):
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    
+    session_id = create_terminal_session(container_id, auth_data.username)
+    
+    return {
+        "session_id": session_id,
+        "container_id": container_id,
+        "username": auth_data.username,
+        "message": f"Authentication successful for {container_id}",
+        "timestamp": datetime.utcnow()
+    }
+
+@api_router.get("/nanobox/containers/{container_id}/terminal/users")
+async def get_test_users(container_id: str):
+    """Get available test users for terminal access"""
+    if container_id not in container_states:
+        raise HTTPException(status_code=404, detail=f"Container {container_id} not found")
+    
+    return {
+        "container_id": container_id,
+        "available_users": [
+            {"username": "testuser", "description": "Standard test user"},
+            {"username": "admin", "description": "Administrator user"},
+            {"username": "developer", "description": "Developer user"}, 
+            {"username": "nanobox", "description": "Nanobox service user"}
+        ],
+        "note": "Use the test passwords provided in documentation"
+    }
+
+@api_router.websocket("/nanobox/containers/{container_id}/terminal/{session_id}")
+async def terminal_websocket(websocket: WebSocket, container_id: str, session_id: str):
+    """WebSocket endpoint for terminal interaction"""
+    await websocket.accept()
+    
+    # Validate session
+    if session_id not in active_sessions:
+        await websocket.close(code=1008, reason="Invalid session")
+        return
+    
+    session = active_sessions[session_id]
+    if session["container_id"] != container_id:
+        await websocket.close(code=1008, reason="Session container mismatch")
+        return
+    
+    try:
+        # Simulate terminal environment
+        await websocket.send_text(f"\r\n=== Nanobox DevStack Terminal ===\r\n")
+        await websocket.send_text(f"Container: {container_id}\r\n")
+        await websocket.send_text(f"User: {session['username']}\r\n")
+        await websocket.send_text(f"Connected at: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}\r\n")
+        await websocket.send_text(f"\r\n{session['username']}@{container_id.split('-')[0]}:~$ ")
+        
+        while True:
+            try:
+                # Wait for user input
+                data = await websocket.receive_text()
+                command_data = json.loads(data)
+                
+                if command_data.get("type") == "input":
+                    user_input = command_data.get("data", "")
+                    
+                    # Echo input
+                    await websocket.send_text(user_input)
+                    
+                    # Process command (simulated)
+                    if user_input.strip() == "":
+                        await websocket.send_text(f"\r\n{session['username']}@{container_id.split('-')[0]}:~$ ")
+                    elif user_input.strip() in ["exit", "logout"]:
+                        await websocket.send_text("\r\nConnection closed.\r\n")
+                        break
+                    elif user_input.strip() == "help":
+                        await websocket.send_text("\r\nAvailable commands:")
+                        await websocket.send_text("\r\n  ls       - List directory contents")
+                        await websocket.send_text("\r\n  pwd      - Print working directory") 
+                        await websocket.send_text("\r\n  whoami   - Show current user")
+                        await websocket.send_text("\r\n  ps       - Show processes")
+                        await websocket.send_text("\r\n  top      - Show system processes")
+                        await websocket.send_text("\r\n  exit     - Close terminal")
+                        await websocket.send_text(f"\r\n{session['username']}@{container_id.split('-')[0]}:~$ ")
+                    elif user_input.strip() == "ls":
+                        await websocket.send_text("\r\nbin  dev  etc  home  lib  opt  proc  root  run  sys  tmp  usr  var")
+                        await websocket.send_text(f"\r\n{session['username']}@{container_id.split('-')[0]}:~$ ")
+                    elif user_input.strip() == "pwd":
+                        await websocket.send_text(f"\r\n/home/{session['username']}")
+                        await websocket.send_text(f"\r\n{session['username']}@{container_id.split('-')[0]}:~$ ")
+                    elif user_input.strip() == "whoami":
+                        await websocket.send_text(f"\r\n{session['username']}")
+                        await websocket.send_text(f"\r\n{session['username']}@{container_id.split('-')[0]}:~$ ")
+                    elif user_input.strip() == "ps":
+                        await websocket.send_text("\r\nPID TTY      TIME CMD")
+                        await websocket.send_text(f"\r\n1   pts/0    00:00:01 {container_id.split('-')[1]}")
+                        await websocket.send_text("\r\n15  pts/0    00:00:00 bash")
+                        await websocket.send_text(f"\r\n{session['username']}@{container_id.split('-')[0]}:~$ ")
+                    elif user_input.strip() == "top":
+                        await websocket.send_text("\r\nTasks: 3 total, 1 running, 2 sleeping")
+                        await websocket.send_text(f"\r\n%Cpu(s): {random.uniform(1, 10):.1f} us")
+                        await websocket.send_text(f"\r\nKiB Mem: {random.randint(512000, 2048000)} total")
+                        await websocket.send_text(f"\r\n{session['username']}@{container_id.split('-')[0]}:~$ ")
+                    else:
+                        await websocket.send_text(f"\r\nbash: {user_input.strip()}: command not found")
+                        await websocket.send_text(f"\r\n{session['username']}@{container_id.split('-')[0]}:~$ ")
+                    
+                    # Update last activity
+                    session["last_activity"] = datetime.utcnow()
+                    
+            except WebSocketDisconnect:
+                break
+            except Exception as e:
+                logger.error(f"Terminal error: {e}")
+                break
+                
+    except WebSocketDisconnect:
+        pass
+    finally:
+        # Clean up session
+        if session_id in active_sessions:
+            del active_sessions[session_id]
+        logger.info(f"Terminal session {session_id} closed")
+
 @api_router.post("/status", response_model=StatusCheck)
 async def create_status_check(input: StatusCheckCreate):
     status_dict = input.dict()
