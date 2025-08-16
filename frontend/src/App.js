@@ -178,6 +178,8 @@ const Dashboard = () => {
   const [metrics, setMetrics] = useState(null);
   const [containers, setContainers] = useState([]);
   const [error, setError] = useState(null);
+  const [selectedContainer, setSelectedContainer] = useState(null);
+  const [showTerminal, setShowTerminal] = useState(false);
 
   const fetchData = async () => {
     try {
