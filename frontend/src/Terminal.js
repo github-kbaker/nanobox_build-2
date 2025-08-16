@@ -109,12 +109,28 @@ const TerminalModal = ({ container, onClose }) => {
     connectWebSocket(terminal, sessionId);
     
     // Handle terminal input
+    let currentLine = '';
     terminal.onData((data) => {
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({
-          type: 'input',
-          data: data
-        }));
+        // Handle special keys
+        if (data === '\r') {
+          // Enter key - send the complete command
+          wsRef.current.send(JSON.stringify({
+            type: 'input',
+            data: currentLine
+          }));
+          currentLine = '';
+        } else if (data === '\u007f') {
+          // Backspace key
+          if (currentLine.length > 0) {
+            currentLine = currentLine.slice(0, -1);
+            terminal.write('\b \b'); // Move back, write space, move back again
+          }
+        } else if (data >= ' ' && data <= '~') {
+          // Printable characters
+          currentLine += data;
+          terminal.write(data); // Echo the character
+        }
       }
     });
 
