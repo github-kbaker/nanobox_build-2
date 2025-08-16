@@ -69,10 +69,180 @@ class ResourceMetrics(BaseModel):
     network_recv: float
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
+# Helper functions for system monitoring
+def get_system_status():
+    """Get current system status and metrics"""
+    try:
+        cpu_usage = psutil.cpu_percent(interval=1)
+        memory = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+        boot_time = datetime.fromtimestamp(psutil.boot_time())
+        uptime = datetime.now() - boot_time
+        
+        return SystemStatus(
+            status="online" if cpu_usage < 90 else "warning",
+            uptime=str(uptime).split('.')[0],
+            cpu_usage=round(cpu_usage, 1),
+            memory_usage=round(memory.percent, 1),
+            disk_usage=round(disk.percent, 1)
+        )
+    except Exception as e:
+        logger.error(f"Error getting system status: {e}")
+        return SystemStatus(
+            status="error",
+            uptime="unknown",
+            cpu_usage=0.0,
+            memory_usage=0.0,
+            disk_usage=0.0
+        )
+
+def get_resource_metrics():
+    """Get detailed resource metrics"""
+    try:
+        cpu_usage = psutil.cpu_percent(interval=1)
+        memory = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+        network = psutil.net_io_counters()
+        
+        return ResourceMetrics(
+            cpu_usage=round(cpu_usage, 1),
+            cpu_count=psutil.cpu_count(),
+            memory_total=round(memory.total / (1024**3), 2),  # GB
+            memory_available=round(memory.available / (1024**3), 2),
+            memory_usage=round(memory.percent, 1),
+            disk_total=round(disk.total / (1024**3), 2),
+            disk_free=round(disk.free / (1024**3), 2),
+            disk_usage=round(disk.percent, 1),
+            network_sent=round(network.bytes_sent / (1024**2), 2),  # MB
+            network_recv=round(network.bytes_recv / (1024**2), 2)
+        )
+    except Exception as e:
+        logger.error(f"Error getting resource metrics: {e}")
+        return ResourceMetrics(
+            cpu_usage=0.0, cpu_count=0, memory_total=0.0, memory_available=0.0,
+            memory_usage=0.0, disk_total=0.0, disk_free=0.0, disk_usage=0.0,
+            network_sent=0.0, network_recv=0.0
+        )
+
+def get_mock_containers():
+    """Generate mock container data for demo purposes"""
+    containers = [
+        {
+            "id": "nanobox-web-001",
+            "name": "nanobox-web",
+            "status": "running",
+            "image": "nginx:1.21-alpine",
+            "created": datetime.now() - asyncio.get_event_loop().time() * 3600,
+            "ports": ["80:8080", "443:8443"],
+            "cpu_usage": round(random.uniform(5, 25), 1),
+            "memory_usage": round(random.uniform(10, 50), 1)
+        },
+        {
+            "id": "nanobox-api-001",
+            "name": "nanobox-api",
+            "status": "running",
+            "image": "python:3.9-slim",
+            "created": datetime.now() - asyncio.get_event_loop().time() * 7200,
+            "ports": ["8001:8001"],
+            "cpu_usage": round(random.uniform(2, 15), 1),
+            "memory_usage": round(random.uniform(15, 40), 1)
+        },
+        {
+            "id": "nanobox-db-001",
+            "name": "nanobox-db",
+            "status": "running",
+            "image": "mongodb:5.0",
+            "created": datetime.now() - asyncio.get_event_loop().time() * 14400,
+            "ports": ["27017:27017"],
+            "cpu_usage": round(random.uniform(1, 10), 1),
+            "memory_usage": round(random.uniform(20, 60), 1)
+        },
+        {
+            "id": "nanobox-cache-001",
+            "name": "nanobox-cache",
+            "status": "stopped",
+            "image": "redis:6.2-alpine",
+            "created": datetime.now() - asyncio.get_event_loop().time() * 28800,
+            "ports": ["6379:6379"],
+            "cpu_usage": 0.0,
+            "memory_usage": 0.0
+        }
+    ]
+    
+    return [ContainerInfo(
+        id=c["id"],
+        name=c["name"],
+        status=c["status"],
+        image=c["image"],
+        created=datetime.now() - datetime.timedelta(seconds=random.randint(3600, 86400)),
+        ports=c["ports"],
+        cpu_usage=c["cpu_usage"],
+        memory_usage=c["memory_usage"]
+    ) for c in containers]
+
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
     return {"message": "Hello World"}
+
+# Nanobox DevStack API endpoints
+@api_router.get("/nanobox/status")
+async def get_nanobox_status():
+    """Get overall system status for Nanobox DevStack"""
+    return get_system_status()
+
+@api_router.get("/nanobox/health")
+async def health_check():
+    """Health check endpoint for Nanobox DevStack"""
+    return {
+        "status": "healthy",
+        "service": "nanobox-devstack",
+        "version": "1.0.0",
+        "timestamp": datetime.utcnow()
+    }
+
+@api_router.get("/nanobox/metrics", response_model=ResourceMetrics)
+async def get_system_metrics():
+    """Get detailed system resource metrics"""
+    return get_resource_metrics()
+
+@api_router.get("/nanobox/containers", response_model=List[ContainerInfo])
+async def get_containers():
+    """Get list of containers with their status and metrics"""
+    return get_mock_containers()
+
+@api_router.post("/nanobox/containers/{container_id}/start")
+async def start_container(container_id: str):
+    """Start a container"""
+    # In a real implementation, this would use Docker API
+    await asyncio.sleep(1)  # Simulate operation delay
+    return {
+        "message": f"Container {container_id} started successfully",
+        "status": "running",
+        "timestamp": datetime.utcnow()
+    }
+
+@api_router.post("/nanobox/containers/{container_id}/stop")
+async def stop_container(container_id: str):
+    """Stop a container"""
+    # In a real implementation, this would use Docker API
+    await asyncio.sleep(1)  # Simulate operation delay
+    return {
+        "message": f"Container {container_id} stopped successfully",
+        "status": "stopped",
+        "timestamp": datetime.utcnow()
+    }
+
+@api_router.post("/nanobox/containers/{container_id}/restart")
+async def restart_container(container_id: str):
+    """Restart a container"""
+    # In a real implementation, this would use Docker API
+    await asyncio.sleep(2)  # Simulate operation delay
+    return {
+        "message": f"Container {container_id} restarted successfully",
+        "status": "running",
+        "timestamp": datetime.utcnow()
+    }
 
 @api_router.post("/status", response_model=StatusCheck)
 async def create_status_check(input: StatusCheckCreate):
