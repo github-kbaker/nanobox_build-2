@@ -221,6 +221,16 @@ const Dashboard = () => {
     }
   };
 
+  const handleTerminalAccess = (container) => {
+    setSelectedContainer(container);
+    setShowTerminal(true);
+  };
+
+  const handleCloseTerminal = () => {
+    setShowTerminal(false);
+    setSelectedContainer(null);
+  };
+
   useEffect(() => {
     fetchData();
     const interval = setInterval(fetchData, 10000); // Refresh every 10 seconds
