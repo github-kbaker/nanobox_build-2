@@ -92,7 +92,7 @@ const MetricCard = ({ title, value, icon: Icon, unit, status }) => {
 };
 
 // Container Row Component
-const ContainerRow = ({ container, onAction }) => {
+const ContainerRow = ({ container, onAction, onTerminal }) => {
   const [loading, setLoading] = useState(false);
   
   const handleAction = async (action) => {
@@ -125,6 +125,18 @@ const ContainerRow = ({ container, onAction }) => {
       </td>
       <td className="py-3 px-4">
         <div className="flex space-x-2">
+          {/* Terminal access button - only for running containers */}
+          {container.status === 'running' && (
+            <button
+              onClick={() => onTerminal(container)}
+              className="p-1 rounded text-purple-400 hover:bg-purple-400/20"
+              title="Terminal Access"
+            >
+              <Terminal className="w-4 h-4" />
+            </button>
+          )}
+          
+          {/* Container control buttons */}
           {container.status !== 'running' && (
             <button
               onClick={() => handleAction('start')}
