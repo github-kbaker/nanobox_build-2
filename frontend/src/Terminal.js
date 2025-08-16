@@ -72,7 +72,7 @@ const TerminalModal = ({ container, onClose }) => {
     }
   };
 
-  const initializeTerminal = () => {
+  const initializeTerminal = (sessionId) => {
     if (!terminalRef.current) return;
 
     // Create terminal instance
@@ -105,8 +105,8 @@ const TerminalModal = ({ container, onClose }) => {
     xtermRef.current = terminal;
     fitAddonRef.current = fitAddon;
     
-    // Connect WebSocket
-    connectWebSocket(terminal);
+    // Connect WebSocket with the session ID
+    connectWebSocket(terminal, sessionId);
     
     // Handle terminal input
     terminal.onData((data) => {
