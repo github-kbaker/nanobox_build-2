@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import "./App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import axios from "axios";
+import TerminalModal from "./Terminal";
 import { 
   Activity, 
   Server, 
@@ -15,7 +16,8 @@ import {
   CheckCircle,
   AlertCircle,
   XCircle,
-  Loader2
+  Loader2,
+  Terminal
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
