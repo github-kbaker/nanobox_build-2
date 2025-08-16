@@ -58,11 +58,12 @@ const TerminalModal = ({ container, onClose }) => {
         container_id: container.id
       });
 
-      setSessionId(response.data.session_id);
+      const newSessionId = response.data.session_id;
+      setSessionId(newSessionId);
       setIsAuthenticated(true);
       
-      // Initialize terminal after successful auth
-      setTimeout(initializeTerminal, 100);
+      // Initialize terminal with the actual session ID
+      setTimeout(() => initializeTerminal(newSessionId), 100);
       
     } catch (error) {
       setAuthError(error.response?.data?.detail || 'Authentication failed');
