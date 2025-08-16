@@ -1,4 +1,5 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -12,6 +13,10 @@ from datetime import datetime, timedelta
 import psutil
 import asyncio
 import random
+import subprocess
+import ptyprocess
+import json
+import base64
 
 
 ROOT_DIR = Path(__file__).parent
