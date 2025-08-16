@@ -190,12 +190,18 @@ const Dashboard = () => {
 
   const handleContainerAction = async (containerId, action) => {
     try {
-      await axios.post(`${API}/nanobox/containers/${containerId}/${action}`);
+      console.log(`Performing ${action} on container: ${containerId}`);
+      const response = await axios.post(`${API}/nanobox/containers/${containerId}/${action}`);
+      console.log(`${action} response:`, response.data);
+      
       // Refresh container data
+      console.log('Refreshing container data...');
       const containersRes = await axios.get(`${API}/nanobox/containers`);
       setContainers(containersRes.data);
+      console.log('Container data refreshed');
     } catch (err) {
       console.error(`Container ${action} error:`, err);
+      console.error('Error details:', err.response?.data || err.message);
     }
   };
 
