@@ -127,13 +127,14 @@ const TerminalModal = ({ container, onClose }) => {
     };
   };
 
-  const connectWebSocket = (terminal) => {
+  const connectWebSocket = (terminal, sessionId) => {
     // For local development, use ws:// and for production use wss://
     const baseUrl = BACKEND_URL.replace(/^https?:\/\//, '');
     const wsProtocol = BACKEND_URL.startsWith('https://') ? 'wss:' : 'ws:';
     const wsUrl = `${wsProtocol}//${baseUrl}/api/nanobox/containers/${container.id}/terminal/${sessionId}`;
     
     console.log('Connecting to WebSocket:', wsUrl);
+    console.log('Using session ID:', sessionId);
     
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
@@ -156,7 +157,7 @@ const TerminalModal = ({ container, onClose }) => {
         // Attempt reconnect after 2 seconds
         setTimeout(() => {
           if (wsRef.current?.readyState === WebSocket.CLOSED) {
-            connectWebSocket(terminal);
+            connectWebSocket(terminal, sessionId);
           }
         }, 2000);
       } else {
