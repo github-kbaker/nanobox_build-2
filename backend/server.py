@@ -132,7 +132,6 @@ def get_mock_containers():
             "name": "nanobox-web",
             "status": "running",
             "image": "nginx:1.21-alpine",
-            "created": datetime.now() - asyncio.get_event_loop().time() * 3600,
             "ports": ["80:8080", "443:8443"],
             "cpu_usage": round(random.uniform(5, 25), 1),
             "memory_usage": round(random.uniform(10, 50), 1)
@@ -142,7 +141,6 @@ def get_mock_containers():
             "name": "nanobox-api",
             "status": "running",
             "image": "python:3.9-slim",
-            "created": datetime.now() - asyncio.get_event_loop().time() * 7200,
             "ports": ["8001:8001"],
             "cpu_usage": round(random.uniform(2, 15), 1),
             "memory_usage": round(random.uniform(15, 40), 1)
@@ -152,7 +150,6 @@ def get_mock_containers():
             "name": "nanobox-db",
             "status": "running",
             "image": "mongodb:5.0",
-            "created": datetime.now() - asyncio.get_event_loop().time() * 14400,
             "ports": ["27017:27017"],
             "cpu_usage": round(random.uniform(1, 10), 1),
             "memory_usage": round(random.uniform(20, 60), 1)
@@ -162,7 +159,6 @@ def get_mock_containers():
             "name": "nanobox-cache",
             "status": "stopped",
             "image": "redis:6.2-alpine",
-            "created": datetime.now() - asyncio.get_event_loop().time() * 28800,
             "ports": ["6379:6379"],
             "cpu_usage": 0.0,
             "memory_usage": 0.0
