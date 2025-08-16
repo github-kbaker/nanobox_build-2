@@ -33,6 +33,20 @@ app = FastAPI()
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
+# HTTP Basic Auth for terminal access
+security = HTTPBasic()
+
+# Test users for container access
+TEST_USERS = {
+    "testuser": "testpass123",
+    "admin": "admin123", 
+    "developer": "dev123",
+    "nanobox": "nanobox123"
+}
+
+# Active terminal sessions
+active_sessions = {}
+
 
 # Define Models
 class StatusCheck(BaseModel):
